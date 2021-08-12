@@ -1,0 +1,228 @@
+﻿@(Html.DevExtreme().DataGrid<DevExtremeDemo.Models.Customer>()
+    .ID("gridContainer")
+    .ShowBorders(true)
+    .RepaintChangesOnly(true)
+    .Scrolling(s => s.RowRenderingMode(GridRowRenderingMode.Virtual))
+    //.Editing(e => e
+    //    .Mode(GridEditMode.Cell)
+    //    .RefreshMode(GridEditRefreshMode.Reshape)
+    //    .AllowAdding(true)
+    //    .AllowDeleting(true)
+    //    .AllowUpdating(true)
+    //)//单元格新增编辑
+    .Editing(e => e.Mode(GridEditMode.Popup)//弹出式新增编辑
+        .AllowUpdating(true)
+        .AllowAdding(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+            .Title("客户信息")
+            .ShowTitle(true)
+            .Width(700)
+            .Height(525)
+        )
+        .Form(f => f.Items(items =>
+        {
+            items.AddGroup()
+                .ColCount(2)
+                .ColSpan(2)
+                .Items(groupItems =>
+                {
+                    groupItems.AddSimpleFor(m => m.first_name);
+                    groupItems.AddSimpleFor(m => m.last_name);
+                    groupItems.AddSimpleFor(m => m.email);
+                    groupItems.AddSimpleFor(m => m.active);
+                    groupItems.AddSimpleFor(m => m.create_date);
+                    groupItems.AddSimpleFor(m => m.last_update);
+
+                });
+
+            items.AddGroup()
+                .Caption("Home Address")
+                .ColCount(2)
+                .ColSpan(2)
+                .Items(groupItems =>
+                {
+                    groupItems.AddSimpleFor(m => m.store_id);
+                    groupItems.AddSimpleFor(m => m.address_id);
+                });
+        }))
+    )
+    .Columns(columns => {
+        columns.AddFor(m => m.customer_id);
+
+        columns.AddFor(m => m.first_name);
+
+        columns.AddFor(m => m.last_name);
+
+        columns.AddFor(m => m.email);
+        columns.AddFor(m => m.active)
+            .Lookup(lookup => lookup
+                .DataSource(d => d.WebApi()
+                    .Controller("DataGridWebApi")
+                    .LoadAction("ActiveLookup")
+                    .LoadMode(DataSourceLoadMode.Raw)
+                    .Key("Value")
+                    .OnBeforeSend("beforeSend")
+                )
+                .ValueExpr("Value")
+                .DisplayExpr("Text")
+            );
+
+        columns.AddFor(m => m.address_id)
+            .Lookup(lookup => lookup
+                .DataSource(d => d.WebApi()
+                    .Controller("DataGridWebApi")
+                    .LoadAction("AddressLookup")
+                    .LoadMode(DataSourceLoadMode.Raw)
+                    .Key("Value")
+                    .OnBeforeSend("beforeSend")
+                )
+                .ValueExpr("Value")
+                .DisplayExpr("Text")
+            );
+
+        columns.AddFor(m => m.store_id)
+            .Lookup(lookup => lookup
+                .DataSource(d => d.WebApi()
+                    .Controller("DataGridWebApi")
+                    .LoadAction("StoreLookup")
+                    .LoadMode(DataSourceLoadMode.Raw)
+                    .Key("Value")
+                    .OnBeforeSend("beforeSend")
+                )
+                .ValueExpr("Value")
+                .DisplayExpr("Text")
+            );
+
+        columns.AddFor(m => m.create_date);
+        columns.AddFor(m => m.last_update);
+
+    })
+    .Paging(paging => paging.PageSize(10))
+    .Pager(pager =>
+    {
+        pager.Visible(true);
+        pager.DisplayMode(GridPagerDisplayMode.Full);
+        pager.ShowPageSizeSelector(true);
+        pager.AllowedPageSizes(new JS("[5, 10,20,50, 'all']"));
+        pager.ShowInfo(true);
+        pager.ShowNavigationButtons(true);
+    })
+    .FilterRow(f => f.Visible(true))
+    @*.CustomizeColumns(@<text>
+        function(columns) {
+            columns[0].width = 70;
+        }
+    </text>)*@
+    .DataSource(d => d.WebApi()
+        .Controller("DataGridWebApi")
+        .LoadAction("Customers")
+        .InsertAction("InsertCustomer")
+        .UpdateAction("UpdateCustomer")
+        .DeleteAction("DeleteCustomer")
+        .Key("customer_id")
+        .OnBeforeSend("beforeSend")
+    )
+)
+<div class="options">
+    <div class="caption">Options</div>
+    <div class="option-container">
+        <div class="option">
+            @(Html.DevExtreme().SelectBox()
+                    .ID("displayMode")
+                    .DataSource(new[] { new { text= "Display Mode 'full'", value= "full" }, new { text= "Display Mode 'compact'", value= "compact" } })
+                    .DisplayExpr("text")
+                    .ValueExpr("value")
+                    .Value("full")
+                    .OnValueChanged(@<text>
+                        function(data) {
+                            var dataGrid = $("#gridContainer").dxDataGrid("instance");
+                            var showInfo = $("#showInfo").dxCheckBox("instance");
+                            var navButtons = $("#showNavButtons").dxCheckBox("instance");
+                            dataGrid.option("pager.displayMode", data.value);
+                            showInfo.option("disabled", data.value === "compact");
+                            navButtons.option("disabled", data.value === "compact");
+                        }
+                    </text>)
+                )
+        </div>
+        <div class="option">
+            @(Html.DevExtreme().CheckBox()
+            .ID("showPageSizes")
+            .Text("Show Page Size Selector")
+            .Value(true)
+            .OnValueChanged(@<text>
+                    function(data) {
+                        var dataGrid = $("#gridContainer").dxDataGrid("instance");
+                        dataGrid.option("pager.showPageSizeSelector", data.value);
+                    }
+                </text>)
+            )
+        </div>
+        <div class="option">
+            @(Html.DevExtreme().CheckBox()
+            .ID("showInfo")
+            .Text("Show Info Text")
+            .Value(true)
+            .OnValueChanged(@<text>
+                    function(data) {
+                        var dataGrid = $("#gridContainer").dxDataGrid("instance");
+                        dataGrid.option("pager.showInfo", data.value);
+                    }
+                </text>)
+            )
+        </div>
+        <div class="option">
+            @(Html.DevExtreme().CheckBox()
+            .ID("showNavButtons")
+            .Text("Show Navigation Buttons")
+            .Value(true)
+            .OnValueChanged(@<text>
+                    function(data) {
+                        var dataGrid = $("#gridContainer").dxDataGrid("instance");
+                        dataGrid.option("pager.showNavigationButtons", data.value);
+                    }
+                </text>)
+            )
+        </div>
+        <div class="option">
+            <span>Refresh Mode:</span>
+            @(Html.DevExtreme().SelectBox()
+            .ID("refresh-mode")
+            .DataSource(new[] { "full", "reshape", "repaint" })
+            .Value("reshape")
+            .OnValueChanged(@<text> function(e) {
+                $("#grid").dxDataGrid("instance").option("editing.refreshMode", e.value);
+            } </text>)
+        )
+        </div>
+    </div>
+    <div id="requests">
+        <div>
+            <div class="caption">Network Requests</div>
+            @(Html.DevExtreme().Button()
+                .ID("clear")
+                .Text("Clear")
+                .OnClick(@<text> function() {
+                    $("#requests ul").empty();
+                } </text>)
+            )
+        </div>
+        <ul></ul>
+    </div>
+
+</div>
+<script>
+    function beforeSend(operation, ajaxSettings) {
+        var data = ajaxSettings.data || {},
+            args = Object.keys(data).map(function (key) {
+                return key + "=" + data[key];
+            }).join(" ");
+
+        var logList = $("#requests ul"),
+            time = DevExpress.localization.formatDate(new Date(), "HH:mm:ss"),
+            newItem = $("<li>").text([time, ajaxSettings.method, ajaxSettings.url, args].join(" "));
+
+        logList.prepend(newItem);
+    }
+</script>
